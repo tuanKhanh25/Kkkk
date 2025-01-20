@@ -1,40 +1,54 @@
+-- Cấu hình cho nâng tộc và các chức năng
 local settings = {
     autoFarm = false,
     autoFly = false,
     autoFruit = false,
-    autoCollectChests = false,
     autoQuest = false,
     autoRespawn = true,
-    safeMode = true,
-    farmSpeed = 1,
-    flySpeed = 50,
-    flyHeight = 100,
+    godMode = false,
+    teleportEnabled = true,
+    autoBuyItems = false,
+    farmSpeed = 1,  -- Tốc độ farm
+    flySpeed = 50,  -- Tốc độ bay
+    flyHeight = 100,  -- Độ cao bay
     randomDelay = true,
     minDelay = 2,
     maxDelay = 4,
+    menuEnabled = true,
+    raceType = "Human",  -- Loại tộc, có thể là "Human", "Mink", "Fishman",...
+    v2QuestComplete = false,
+    v3QuestComplete = false,
+    v4QuestComplete = false
 }
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
-local flyControl = nil
 
+-- Tạo menu GUI
 local function createMenu()
     local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
     local MainFrame = Instance.new("Frame", ScreenGui)
     MainFrame.Size = UDim2.new(0, 200, 0, 400)
     MainFrame.Position = UDim2.new(0, 10, 0, 10)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    MainFrame.BackgroundTransparency = 0.3
+    MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    MainFrame.BackgroundTransparency = 0.5
+    MainFrame.Visible = settings.menuEnabled  -- Điều chỉnh độ hiển thị menu
 
-    local features = {"autoFarm", "autoFly", "autoFruit", "autoCollectChests", "autoQuest", "safeMode", "autoRespawn"}
-    for i, feature in ipairs(features) do
+    -- Các mục trong menu
+    local functions = {
+        "autoFarm", "autoFly", "autoFruit", "autoQuest", "autoRespawn",
+        "godMode", "autoBuyItems", "teleportEnabled"
+    }
+
+    for i, feature in ipairs(functions) do
         local Button = Instance.new("TextButton", MainFrame)
         Button.Size = UDim2.new(0, 180, 0, 30)
-        Button.Position = UDim2.new(0, 10, 0, (i - 1) * 40 + 10)
-        Button.Text = feature .. ": OFF"
+        Button.Position = UDim2.new(0, 10, 0, (i - 1) * 35 + 10)
+        Button.Text = feature
         Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
         Button.TextColor3 = Color3.new(1, 1, 1)
+
         Button.MouseButton1Click:Connect(function()
             settings[feature] = not settings[feature]
             Button.Text = feature .. ": " .. (settings[feature] and "ON" or "OFF")
@@ -42,12 +56,34 @@ local function createMenu()
     end
 end
 
+-- Thêm logo bật/tắt menu
+local function createLogo()
+    local logoButton = Instance.new("ImageButton")
+    logoButton.Size = UDim2.new(0, 50, 0, 50)
+    logoButton.Position = UDim2.new(0, 10, 0, 10)
+    logoButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Màu logo là đen
+    logoButton.Image = ""  -- Không sử dụng hình ảnh, chỉ có màu nền đen
+    logoButton.Parent = player.PlayerGui
+
+    logoButton.MouseButton1Click:Connect(function()
+        settings.menuEnabled = not settings.menuEnabled
+        print("Menu bật/tắt: " .. (settings.menuEnabled and "Hiện" or "Ẩn"))
+        -- Điều chỉnh độ hiển thị của menu khi logo được nhấn
+        local menu = player.PlayerGui:FindFirstChildOfClass("ScreenGui")
+        if menu then
+            menu:FindFirstChildOfClass("Frame").Visible = settings.menuEnabled
+        end
+    end)
+end
+
+-- Hàm delay ngẫu nhiên
 local function randomDelayFunction()
     if settings.randomDelay then
         task.wait(math.random(settings.minDelay, settings.maxDelay))
     end
 end
 
+-- Tự động farm
 local function autoFarm()
     if settings.autoFarm then
         local enemies = workspace:FindFirstChild("Enemies")
@@ -64,74 +100,132 @@ local function autoFarm()
     end
 end
 
+-- Tự động bay
 local function autoFly()
     if settings.autoFly then
-        if not flyControl then
-            flyControl = Instance.new("BodyVelocity")
-            flyControl.MaxForce = Vector3.new(5000, 5000, 5000)
-            flyControl.Parent = hrp
-        end
+        local flyControl = Instance.new("BodyVelocity")
+        flyControl.MaxForce = Vector3.new(5000, 5000, 5000)
+        flyControl.Parent = hrp
         flyControl.Velocity = Vector3.new(0, settings.flySpeed, 0)
         hrp.CFrame = hrp.CFrame + Vector3.new(0, settings.flyHeight, 0)
-    elseif flyControl then
-        flyControl:Destroy()
-        flyControl = nil
+        randomDelayFunction()
     end
 end
 
+-- Tự động nhặt trái ác quỷ
 local function autoCollectFruits()
     if settings.autoFruit then
         local fruits = workspace:FindFirstChild("Fruits")
         if fruits then
             for _, fruit in ipairs(fruits:GetChildren()) do
-                hrp.CFrame = fruit.CFrame
-                randomDelayFunction()
+                if fruit:FindFirstChild("Touched") then
+                    hrp.CFrame = fruit.CFrame
+                    print("Nhặt trái ác quỷ: " .. fruit.Name)
+                    randomDelayFunction()
+                end
             end
         end
     end
 end
 
-local function autoCollectChests()
-    if settings.autoCollectChests then
-        local chests = workspace:FindFirstChild("Chests")
-        if chests then
-            for _, chest in ipairs(chests:GetChildren()) do
-                hrp.CFrame = chest.CFrame
-                randomDelayFunction()
-            end
-        end
-    end
-end
-
+-- Tự động hoàn thành nhiệm vụ
 local function autoQuest()
     if settings.autoQuest then
         local questNPC = workspace:FindFirstChild("QuestNPC")
         if questNPC then
             hrp.CFrame = questNPC.HumanoidRootPart.CFrame
             randomDelayFunction()
+            print("Nhận nhiệm vụ từ NPC: " .. questNPC.Name)
         end
     end
 end
 
+-- Tự động hồi sinh
 local function autoRespawn()
     if settings.autoRespawn and (not character or character.Humanoid.Health <= 0) then
+        print("Nhân vật đã chết, đang hồi sinh...")
         player:LoadCharacter()
     end
 end
 
+-- Tự động mua vật phẩm
+local function autoBuyItems()
+    if settings.autoBuyItems then
+        -- Tự động mua các vật phẩm như thuyền, vũ khí, haki, v.v.
+        print("Đang tự động mua vật phẩm...")
+    end
+end
+
+-- Tự động bật God Mode (Bất tử)
+local function godMode()
+    if settings.godMode then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.Health = humanoid.MaxHealth
+            print("Đã kích hoạt chế độ God Mode!")
+        end
+    end
+end
+
+-- Tự động dịch chuyển
+local function teleportTo(location)
+    if settings.teleportEnabled then
+        hrp.CFrame = location
+        print("Đã dịch chuyển đến vị trí.")
+    end
+end
+
+-- Cập nhật và kiểm tra tiến trình nhiệm vụ nâng tộc
+local function checkRaceQuestStatus()
+    if settings.raceType == "Human" then
+        if not settings.v2QuestComplete then
+            print("Bắt đầu nhiệm vụ nâng tộc V2 cho Human")
+            -- Logic để hoàn thành nhiệm vụ V2
+        elseif not settings.v3QuestComplete then
+            print("Bắt đầu nhiệm vụ nâng tộc V3 cho Human")
+            -- Logic để hoàn thành nhiệm vụ V3
+        elseif not settings.v4QuestComplete then
+            print("Bắt đầu nhiệm vụ nâng tộc V4 cho Human")
+            -- Logic để hoàn thành nhiệm vụ V4
+        end
+    end
+end
+
+-- Tìm NPC nâng cấp tộc
+local function findRaceUpgradeNPC()
+    local npcLocation = nil
+    if settings.raceType == "Human" then
+        npcLocation = workspace:FindFirstChild("HumanRaceNPC") -- Thay bằng tên NPC thực tế
+    elseif settings.raceType == "Mink" then
+        npcLocation = workspace:FindFirstChild("MinkRaceNPC") -- Thay bằng tên NPC thực tế
+    elseif settings.raceType == "Fishman" then
+        npcLocation = workspace:FindFirstChild("FishmanRaceNPC") -- Thay bằng tên NPC thực tế
+    end
+
+    if npcLocation then
+        return npcLocation
+    else
+        print("Không tìm thấy NPC nâng tộc")
+        return nil
+    end
+end
+
+-- Bắt đầu nhiệm vụ nâng tộc
+local function startRaceQuest()
+    local npc = findRaceUpgradeNPC()
+    if npc then
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = npc.CFrame
+        print("Đã đến NPC nâng tộc")
+        checkRaceQuestStatus()
+    end
+end
+
+-- Hàm chính kiểm tra và chạy các chức năng
 spawn(function()
     createMenu()
+    createLogo()  -- Thêm logo bật/tắt menu
     while true do
         if settings.autoFarm then autoFarm() end
         if settings.autoFly then autoFly() end
         if settings.autoFruit then autoCollectFruits() end
-        if settings.autoCollectChests then autoCollectChests() end
-        if settings.autoQuest then autoQuest() end
-        autoRespawn()
-        task.wait(1)
-    end
-end)
-
-print("Script đã khởi chạy thành công!")
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/tuanKhanh25/Kkkk/refs/heads/main/Khanhkuma", true))()
+        if settings.autoQuest then autoQuest() endloadstring(game:HttpGet("URL_của_script_của_bạn", true))()
