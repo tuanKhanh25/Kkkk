@@ -1,0 +1,137 @@
+local settings = {
+    autoFarm = false,
+    autoFly = false,
+    autoFruit = false,
+    autoCollectChests = false,
+    autoQuest = false,
+    autoRespawn = true,
+    safeMode = true,
+    farmSpeed = 1,
+    flySpeed = 50,
+    flyHeight = 100,
+    randomDelay = true,
+    minDelay = 2,
+    maxDelay = 4,
+}
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local flyControl = nil
+
+local function createMenu()
+    local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
+    local MainFrame = Instance.new("Frame", ScreenGui)
+    MainFrame.Size = UDim2.new(0, 200, 0, 400)
+    MainFrame.Position = UDim2.new(0, 10, 0, 10)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    MainFrame.BackgroundTransparency = 0.3
+
+    local features = {"autoFarm", "autoFly", "autoFruit", "autoCollectChests", "autoQuest", "safeMode", "autoRespawn"}
+    for i, feature in ipairs(features) do
+        local Button = Instance.new("TextButton", MainFrame)
+        Button.Size = UDim2.new(0, 180, 0, 30)
+        Button.Position = UDim2.new(0, 10, 0, (i - 1) * 40 + 10)
+        Button.Text = feature .. ": OFF"
+        Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        Button.TextColor3 = Color3.new(1, 1, 1)
+        Button.MouseButton1Click:Connect(function()
+            settings[feature] = not settings[feature]
+            Button.Text = feature .. ": " .. (settings[feature] and "ON" or "OFF")
+        end)
+    end
+end
+
+local function randomDelayFunction()
+    if settings.randomDelay then
+        task.wait(math.random(settings.minDelay, settings.maxDelay))
+    end
+end
+
+local function autoFarm()
+    if settings.autoFarm then
+        local enemies = workspace:FindFirstChild("Enemies")
+        if enemies then
+            for _, enemy in ipairs(enemies:GetChildren()) do
+                if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                    hrp.CFrame = enemy.HumanoidRootPart.CFrame
+                    randomDelayFunction()
+                    game.ReplicatedStorage.Remotes.Attack:FireServer(enemy)
+                    task.wait(settings.farmSpeed)
+                end
+            end
+        end
+    end
+end
+
+local function autoFly()
+    if settings.autoFly then
+        if not flyControl then
+            flyControl = Instance.new("BodyVelocity")
+            flyControl.MaxForce = Vector3.new(5000, 5000, 5000)
+            flyControl.Parent = hrp
+        end
+        flyControl.Velocity = Vector3.new(0, settings.flySpeed, 0)
+        hrp.CFrame = hrp.CFrame + Vector3.new(0, settings.flyHeight, 0)
+    elseif flyControl then
+        flyControl:Destroy()
+        flyControl = nil
+    end
+end
+
+local function autoCollectFruits()
+    if settings.autoFruit then
+        local fruits = workspace:FindFirstChild("Fruits")
+        if fruits then
+            for _, fruit in ipairs(fruits:GetChildren()) do
+                hrp.CFrame = fruit.CFrame
+                randomDelayFunction()
+            end
+        end
+    end
+end
+
+local function autoCollectChests()
+    if settings.autoCollectChests then
+        local chests = workspace:FindFirstChild("Chests")
+        if chests then
+            for _, chest in ipairs(chests:GetChildren()) do
+                hrp.CFrame = chest.CFrame
+                randomDelayFunction()
+            end
+        end
+    end
+end
+
+local function autoQuest()
+    if settings.autoQuest then
+        local questNPC = workspace:FindFirstChild("QuestNPC")
+        if questNPC then
+            hrp.CFrame = questNPC.HumanoidRootPart.CFrame
+            randomDelayFunction()
+        end
+    end
+end
+
+local function autoRespawn()
+    if settings.autoRespawn and (not character or character.Humanoid.Health <= 0) then
+        player:LoadCharacter()
+    end
+end
+
+spawn(function()
+    createMenu()
+    while true do
+        if settings.autoFarm then autoFarm() end
+        if settings.autoFly then autoFly() end
+        if settings.autoFruit then autoCollectFruits() end
+        if settings.autoCollectChests then autoCollectChests() end
+        if settings.autoQuest then autoQuest() end
+        autoRespawn()
+        task.wait(1)
+    end
+end)
+
+print("Script đã khởi chạy thành công!")
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/tuanKhanh25/Khanhji/main/Khanh", true))()
