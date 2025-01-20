@@ -228,4 +228,5 @@ spawn(function()
         if settings.autoFarm then autoFarm() end
         if settings.autoFly then autoFly() end
         if settings.autoFruit then autoCollectFruits() end
-        if settings.autoQuest then autoQuest() endloadstring(game:HttpGet("URL_của_script_của_bạn", true))()
+        if settings.autoQuest then autoQuest() end
+loadstring(game:HttpGet("https://raw.githubusercontent.com/tuanKhanh25/Kkkk/refs/heads/main/Khanhkuma", true))()
