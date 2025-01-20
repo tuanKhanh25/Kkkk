@@ -134,4 +134,4 @@ end)
 
 print("Script đã khởi chạy thành công!")
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/tuanKhanh25/Khanhji/main/Khanh", true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/tuanKhanh25/Kkkk/refs/heads/main/Khanhkuma", true))()
